@@ -54,6 +54,7 @@ impl Model {
                 let skr_json = serde_json::to_value(skr).unwrap();
                 let txn = db.begin().await?;
                 let registration = registrations::ActiveModel {
+                    user_id: ActiveValue::set(params.id),
                     state: ActiveValue::set(skr_json),
                     ..Default::default()
                 }

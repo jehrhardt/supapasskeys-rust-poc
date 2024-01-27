@@ -9,24 +9,17 @@ impl MigrationTrait for Migration {
         let db = manager.get_connection();
         db.execute_unprepared(
             "create table supapasskeys.authentications (
-              id uuid not null default gen_random_uuid(),
-              state jsonb not null,
-              confirmed_at timestamp with time zone null,
-              created_at timestamp with time zone not null default now(),
-              updated_at timestamp with time zone not null default now(),
-              constraint authentications_pkey primary key (id)
+                id uuid not null default gen_random_uuid(),
+                user_id uuid not null,
+                state jsonb not null,
+                confirmed_at timestamp with time zone null,
+                created_at timestamp with time zone not null default now(),
+                updated_at timestamp with time zone not null default now(),
+                constraint authentications_pkey primary key (id)
             )",
         )
         .await?;
-
-        Ok(())
-    }
-
-    async fn down(&self, manager: &SchemaManager) -> Result<(), DbErr> {
-        manager
-            .get_connection()
-            .execute_unprepared("drop table supapasskeys.authentications")
-            .await?;
+        db.execute_unprepared( "create index if not exists authentications_user_id_idx on supapasskeys.authentications using btree (user_id)").await?;
 
         Ok(())
     }
