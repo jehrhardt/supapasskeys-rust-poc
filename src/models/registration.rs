@@ -1,5 +1,7 @@
+use chrono::prelude::*;
 use sea_orm::{
-    ActiveModelTrait, ActiveValue, DatabaseConnection, DbErr, EntityTrait, TransactionTrait,
+    ActiveModelTrait, ActiveValue, DatabaseConnection, DbErr, EntityTrait, IntoActiveModel,
+    TransactionTrait,
 };
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -80,12 +82,13 @@ impl Model {
             .map(|opt| opt.unwrap())
     }
 
-    pub(crate) fn confirm(
+    pub(crate) async fn confirm(
         self,
+        db: &DatabaseConnection,
         relying_party: RelyingParty,
         reg: &RegisterPublicKeyCredential,
     ) -> Result<Passkey, DbErr> {
-        let state = serde_json::from_value::<PasskeyRegistration>(self.state).unwrap();
+        let state = serde_json::from_value::<PasskeyRegistration>(self.state.clone()).unwrap();
         let rp_id = relying_party.origin.domain().unwrap();
         let webauthn = WebauthnBuilder::new(rp_id, &relying_party.origin)
             .map(|builder| builder.rp_name(&relying_party.name))
@@ -93,6 +96,11 @@ impl Model {
             .build()
             .unwrap();
         let passkey = webauthn.finish_passkey_registration(reg, &state).unwrap();
+        let txn = db.begin().await?;
+        let mut registration = self.into_active_model();
+        registration.confirmed_at = ActiveValue::set(Some(Utc::now().fixed_offset()));
+        registration.update(&txn).await?;
+        txn.commit().await?;
         Ok(passkey)
     }
 }
