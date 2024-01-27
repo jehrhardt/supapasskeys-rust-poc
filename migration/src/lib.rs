@@ -4,6 +4,7 @@ mod m20240127_164136_create_schema_supapasskeys;
 mod m20240127_165001_create_table_passkeys;
 mod m20240127_190631_create_table_registrations;
 mod m20240127_191420_create_table_authentications;
+mod m20240127_213626_create_trigger_update_timestamp;
 
 pub struct Migrator;
 
@@ -15,6 +16,7 @@ impl MigratorTrait for Migrator {
             Box::new(m20240127_165001_create_table_passkeys::Migration),
             Box::new(m20240127_190631_create_table_registrations::Migration),
             Box::new(m20240127_191420_create_table_authentications::Migration),
+            Box::new(m20240127_213626_create_trigger_update_timestamp::Migration),
         ]
     }
 }
