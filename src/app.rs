@@ -18,10 +18,17 @@ pub async fn start_server() {
     let config = Config::load();
     let database_connection = db::connect(config.database_url.clone()).await;
     let app = Router::new()
-        .route("/passkeys", post(passkeys::index::create))
+        .route(
+            "/passkeys/registrations",
+            post(passkeys::registrations::create),
+        )
         .route(
             "/passkeys/registrations/:registration_id",
             patch(passkeys::registrations::confirm),
+        )
+        .route(
+            "/passkeys/authentications",
+            post(passkeys::authentications::create),
         )
         .route(
             "/passkeys/authentications/:authentication_id",
