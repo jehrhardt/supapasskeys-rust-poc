@@ -1,9 +1,6 @@
 use std::net::{Ipv4Addr, Ipv6Addr, SocketAddr, SocketAddrV4, SocketAddrV6};
 
-use axum::{
-    routing::{patch, post},
-    Router,
-};
+use axum::Router;
 use sea_orm::DatabaseConnection;
 
 use crate::{api::passkeys, config::Config, db};
@@ -18,22 +15,8 @@ pub async fn start_server() {
     let config = Config::load();
     let database_connection = db::connect(config.database_url.clone()).await;
     let app = Router::new()
-        .route(
-            "/passkeys/registrations",
-            post(passkeys::registrations::create),
-        )
-        .route(
-            "/passkeys/registrations/:registration_id",
-            patch(passkeys::registrations::confirm),
-        )
-        .route(
-            "/passkeys/authentications",
-            post(passkeys::authentications::create),
-        )
-        .route(
-            "/passkeys/authentications/:authentication_id",
-            patch(passkeys::authentications::confirm),
-        )
+        .merge(passkeys::registrations::router())
+        .merge(passkeys::authentications::router())
         .with_state(Context {
             database_connection,
             config,

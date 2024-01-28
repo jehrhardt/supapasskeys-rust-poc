@@ -3,20 +3,21 @@ use axum::{
     extract::{Path, State},
     http::{Response, StatusCode},
     response::IntoResponse,
-    Json,
+    routing::{patch, post},
+    Json, Router,
 };
 use uuid::Uuid;
 use webauthn_rs::prelude::{RegisterPublicKeyCredential, Url};
 
 use crate::{
     app,
-    models::registration::{Model, Registration, RelyingParty, UserParams},
+    models::registration::{Model, RelyingParty, UserParams},
 };
 
-pub(crate) async fn create(
+async fn create(
     State(context): State<app::Context>,
     Json(params): Json<UserParams>,
-) -> Json<Registration> {
+) -> impl IntoResponse {
     let relying_party = RelyingParty {
         name: context.config.relying_party_name.clone(),
         origin: Url::parse(&context.config.relying_party_origin).unwrap(),
@@ -24,10 +25,13 @@ pub(crate) async fn create(
     let registration = Model::new(&context.database_connection, relying_party, params)
         .await
         .unwrap();
-    Json(registration)
+    Response::builder()
+        .status(StatusCode::CREATED)
+        .body(Body::from(serde_json::to_string(&registration).unwrap()))
+        .unwrap()
 }
 
-pub(crate) async fn confirm(
+async fn confirm(
     State(context): State<app::Context>,
     Path(registration_id): Path<Uuid>,
     Json(reg): Json<RegisterPublicKeyCredential>,
@@ -44,4 +48,10 @@ pub(crate) async fn confirm(
         .await
         .unwrap();
     StatusCode::NO_CONTENT.into_response()
+}
+
+pub(crate) fn router() -> Router<app::Context> {
+    Router::new()
+        .route("/passkeys/registrations", post(create))
+        .route("/passkeys/registrations/:id", patch(confirm))
 }
